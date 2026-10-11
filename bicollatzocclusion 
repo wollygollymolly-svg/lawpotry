@@ -1,0 +1,49 @@
+import base64
+import json
+
+def azs_step_logic(n):
+    """Simulates the dual-logic step transition to cycle (AC descent / C burst)."""
+    if n == 0:
+        return 0
+    current = abs(n)
+    steps = 0
+    visited = set()
+    
+    # Run until cycle or convergence, bounded for safety
+    while current > 1 and current not in visited and steps < 300:
+        visited.add(current)
+        if current % 2 == 0:
+            current = current // 2      # AC Rule: Geometric Descent (Normalization)
+        else:
+            current = 3 * current + 1   # C Rule: Informational Burst (Value Spike)
+        steps += 1
+    return steps
+
+def compile_vault_manifest(target_min, target_max):
+    """Scans the designated envelope range and compiles harmonic step-density nodes."""
+    manifest_data = {
+        "framework": "Zerological Binoval Number Field",
+        "algebra": "AZS Flow Logic",
+        "target_range": [target_min, target_max],
+        "nodes": {}
+    }
+    
+    # Filter for high-flux outer envelope and key congruence rails
+    for n in range(target_min, target_max + 1):
+        if abs(n) % 100 == 0 or n == target_min or n == target_max:
+            manifest_data["nodes"][str(n)] = {
+                "steps_to_cycle": azs_step_logic(n),
+                "resonance_state": "High-Flux Buret" if abs(n) >= 9500 else "Congruence Rail"
+            }
+            
+    # Serialize to JSON and encode in Base64
+    json_string = json.dumps(manifest_data, indent=2)
+    encoded_payload = base64.b64encode(json_string.encode('utf-8')).decode('utf-8')
+    return encoded_payload
+
+# Execute for the upper-right positive envelope tier
+encoded_manifest = compile_vault_manifest(7500, 9800)
+
+print("=== DEPLOYED VAULT MANIFEST PAYLOAD ===")
+print(encoded_manifest[:120] + "... [TRUNCATED FOR DISPLAY]")
+print("=======================================")
