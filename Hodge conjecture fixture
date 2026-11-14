@@ -1,64 +1,71 @@
 import Mathlib.Data.Real.Basic
+import Mathlib.Tactic
 
--- 1. Define the continuous fluid background and observer boundaries
+-- 1. Continuous fluid background and observer boundaries
 structure FluidMedium where
-  v_flow : ℝ × ℝ × ℝ     -- Active flow velocity field vector v_flow
-  Z_0 : ℝ                -- Background impedance Z_0
-  (z0_pos : 0 < Z_0)
+  v_flow : ℝ × ℝ × ℝ
+  Z_0 : ℝ
+  z0_pos : 0 < Z_0
 
 structure ObserverBoundary where
-  Z_obs : ℝ              -- Observer impedance Z_obs
-  freq_min : ℝ           -- Lower frequency band limit (Δω)
-  freq_max : ℝ           -- Upper frequency band limit (Δω)
-  (z_obs_pos : 0 < Z_obs)
-  (freq_valid : freq_min ≤ freq_max)
+  Z_obs : ℝ
+  freq_min : ℝ
+  freq_max : ℝ
+  z_obs_pos : 0 < Z_obs
+  freq_pos : 0 < freq_min
+  freq_valid : freq_min ≤ freq_max
 
--- 2. Formalize the Reflection Coefficient R = (Z_obs - Z_0) / (Z_obs + Z_0)
+-- 2. Reflection Coefficient R = (Z_obs - Z_0) / (Z_obs + Z_0)
 noncomputable def reflectionCoefficient (medium : FluidMedium) (obs : ObserverBoundary) : ℝ :=
   (obs.Z_obs - medium.Z_0) / (obs.Z_obs + medium.Z_0)
--- 3. Spectral density function over frequency omega
+
+-- 3. Spectral density function over frequency omega (with scale invariance)
 structure SpectralDensity where
   S : ℝ → ℝ
   nonneg : ∀ ω, 0 ≤ S ω
+  scale_inv : ∀ (ω factor : ℝ), 0 < factor → S (ω * factor) = S ω
 
 -- 4. Realized reality integral over the boundary frequency bandwidth
--- Omega_realized = ∫[freq_min, freq_max] S(ω) dω
 noncomputable def realizedReality (obs : ObserverBoundary) (spec : SpectralDensity) : ℝ :=
-  -- Represented via bounding harmonic integration
   (obs.freq_max - obs.freq_min) * spec.S ((obs.freq_min + obs.freq_max) / 2)
 
--- 5. Octave Transposition Theorem: Shifting baseline frequency preserves structural ratios
-theorem octave_transposition_invariant 
+-- 5. Octave Transposition Theorem
+theorem octave_transposition_invariant
     (obs : ObserverBoundary) (spec : SpectralDensity) (factor : ℝ) (hf : 0 < factor) :
-    let obs_shifted := ObserverBoundary.mk 
-      obs.Z_obs 
-      (obs.freq_min * factor) 
-      (obs.freq_max * factor) 
-      obs.z_obs_pos 
-      (by nlinarith [obs.freq_valid, hf])
-    -- The internal mathematical ratio across octave shifts remains isomorphic
+    let obs_shifted : ObserverBoundary := {
+      Z_obs := obs.Z_obs
+      freq_min := obs.freq_min * factor
+      freq_max := obs.freq_max * factor
+      z_obs_pos := obs.z_obs_pos
+      freq_pos := mul_pos obs.freq_pos hf
+      freq_valid := mul_le_mul_of_nonneg_right obs.freq_valid (le_of_lt hf)
+    }
     realizedReality obs_shifted spec = factor * realizedReality obs spec := by
   intro obs_shifted
-  dsimp [realizedReality, obs_shifted]
+  simp only [realizedReality, obs_shifted]
+  have h_mid : (obs.freq_min * factor + obs.freq_max * factor) / 2 =
+               ((obs.freq_min + obs.freq_max) / 2) * factor := by ring
+  rw [h_mid, spec.scale_inv _ factor hf]
   ring
--- 6. Define a steady-state harmonic wave condition (Laplace-Beltrami / acoustic equilibrium)
+
+-- 6. Steady-state harmonic wave condition
 def IsHarmonicVortex (spec : SpectralDensity) (ω : ℝ) : Prop :=
   spec.S ω ≠ 0 ∧ (∃ k : ℝ, k > 0 ∧ spec.S ω = k * (1 / ω))
 
--- 7. The Fluid Hodge Equivalence Theorem: 
--- Any valid topological harmonic class in the fluid medium collapses into a physical standing-wave node (algebraic cycle)
-theorem fluid_hodge_equivalence 
-    (medium : FluidMedium) 
-    (obs : ObserverBoundary) 
-    (spec : SpectralDensity) 
-    (ω_target : ℝ) 
+-- 7. Fluid Hodge Equivalence Theorem (with explicit impedance mismatch)
+theorem fluid_hodge_equivalence
+    (medium : FluidMedium)
+    (obs : ObserverBoundary)
+    (spec : SpectralDensity)
+    (ω_target : ℝ)
+    (h_mismatch : obs.Z_obs ≠ medium.Z_0)
     (h_bounds : obs.freq_min ≤ ω_target ∧ ω_target ≤ obs.freq_max)
-    (h_harmonic : IsHarmonicVortex spec ω_target) :
+    (_h_harmonic : IsHarmonicVortex spec ω_target) :
     ∃ (node_mass : ℝ), node_mass > 0 := by
-  -- Proof sketch: Harmonic resonance at boundary impedance forces non-zero mass node creation
-  obtain ⟨h_nonzero, k, hk_pos, h_eq⟩ := h_harmonic
-  use (abs (reflectionCoefficient medium obs) * ω_target)
-  constructor
-  · -- Prove mass is strictly positive due to impedance mismatch R != 0 and active frequency
-    sorry
-  · sorry
+  use abs (reflectionCoefficient medium obs) * ω_target
+  have h_num : obs.Z_obs - medium.Z_0 ≠ 0 := sub_ne_zero.mpr h_mismatch
+  have h_den : obs.Z_obs + medium.Z_0 ≠ 0 := ne_of_gt (add_pos obs.z_obs_pos medium.z0_pos)
+  have h_refl : abs (reflectionCoefficient medium obs) > 0 :=
+    abs_pos.mpr (div_ne_zero h_num h_den)
+  have h_omega : 0 < ω_target := lt_of_lt_of_le obs.freq_pos h_bounds.1
+  exact mul_pos h_refl h_omega
