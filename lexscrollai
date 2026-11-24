@@ -1,0 +1,52 @@
+{
+  "project": "LexScroll AI",
+  "pipeline_step": "Step 02 - Public Domain Ingestion Scope",
+  "storage_mode": "mobile_control_deck_with_remote_hash_ledger",
+  "exclusions": [
+    "private_government_emails",
+    "sealed_court_records",
+    "restricted_or_classified_documents"
+  ],
+  "active_sources": [
+    {
+      "id": "us_code",
+      "name": "United States Code",
+      "endpoint": "https://www.govinfo.gov/bulkdata/USCODE",
+      "priority": 1,
+      "update_cadence": "daily_check",
+      "hash_algorithm": "SHA-256"
+    },
+    {
+      "id": "federal_register_ecfr",
+      "name": "Federal Register & eCFR",
+      "endpoint": "https://www.federalregister.gov/api/v1/documents.json",
+      "priority": 1,
+      "update_cadence": "daily",
+      "hash_algorithm": "SHA-256"
+    },
+    {
+      "id": "scotus_opinions",
+      "name": "Supreme Court Opinions & Dockets",
+      "endpoint": "https://www.supremecourt.gov/opinions/opinions.aspx",
+      "priority": 1,
+      "update_cadence": "daily",
+      "hash_algorithm": "SHA-256"
+    },
+    {
+      "id": "constitution_annotated",
+      "name": "U.S. Constitution Annotated",
+      "endpoint": "https://constitution.congress.gov/",
+      "priority": 1,
+      "update_cadence": "weekly",
+      "hash_algorithm": "SHA-256"
+    },
+    {
+      "id": "foia_and_agency_releases",
+      "name": "FOIA Logs & Public Agency Guidance",
+      "endpoint": "https://www.foia.gov/",
+      "priority": 2,
+      "update_cadence": "daily",
+      "hash_algorithm": "SHA-256"
+    }
+  ]
+}
